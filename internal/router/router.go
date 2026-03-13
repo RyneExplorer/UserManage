@@ -7,7 +7,11 @@ import (
 	"net/http"
 )
 
-func NewMux(cfg config.Config, auth *controller.AuthController, users *controller.UserController, sessions *middleware.SessionStore) http.Handler {
+func NewMux(cfg config.Config,
+	auth *controller.AuthController,
+	users *controller.UserController,
+	sessions *middleware.SessionStore,
+) http.Handler {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {

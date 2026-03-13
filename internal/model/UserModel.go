@@ -13,6 +13,6 @@ type User struct {
 	Password   string    `json:"-"`
 	Role       string    `json:"role"`
 	Status     int8      `json:"status"`
-	CreateTime time.Time `json:"create_time"`
-	LastTime   time.Time `json:"last_time"`
+	CreateTime time.Time `json:"created_at"`
+	UpdateTime time.Time `json:"updated_at"`
 }

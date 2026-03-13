@@ -10,8 +10,8 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-var ErrInvalidCredentials = errors.New("invalid credentials")
-var ErrUsernameTaken = errors.New("username taken")
+var ErrInvalidCredentials = errors.New("用户名或密码错误")
+var ErrUsernameTaken = errors.New("用户名已被占用")
 
 type UserService struct {
 	repo repository.UserRepository
@@ -24,7 +24,7 @@ func NewUserService(repo repository.UserRepository) *UserService {
 func (s *UserService) Register(ctx context.Context, username, password string) (int, error) {
 	username = strings.TrimSpace(username)
 	if username == "" || password == "" {
-		return 0, errors.New("username and password required")
+		return 0, errors.New("用户名和密码不能为空")
 	}
 
 	existing, err := s.repo.FindByUsername(ctx, username)
@@ -41,6 +41,7 @@ func (s *UserService) Register(ctx context.Context, username, password string) (
 		return 0, err
 	}
 	if count == 0 {
+		// 首个用户自动设为管理员
 		role = model.RoleAdmin
 	}
 
@@ -93,20 +94,20 @@ func (s *UserService) GetByID(ctx context.Context, id int) (*model.User, error) 
 func (s *UserService) UpdateUser(ctx context.Context, user model.User) error {
 	user.Username = strings.TrimSpace(user.Username)
 	if user.ID == 0 || user.Username == "" {
-		return errors.New("invalid user")
+		return errors.New("无效的用户名")
 	}
 	if user.Role != model.RoleAdmin && user.Role != model.RoleUser {
-		return errors.New("invalid role")
+		return errors.New("无效的角色")
 	}
 	if user.Status != 0 && user.Status != 1 {
-		return errors.New("invalid status")
+		return errors.New("无效的状态")
 	}
 	return s.repo.Update(ctx, user)
 }
 
 func (s *UserService) DeleteUser(ctx context.Context, id int) error {
 	if id == 0 {
-		return errors.New("invalid user id")
+		return errors.New("无效的用户id")
 	}
 	return s.repo.Delete(ctx, id)
 }

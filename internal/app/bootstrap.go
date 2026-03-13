@@ -4,7 +4,7 @@ import (
 	"UserManagement/internal/config"
 	"UserManagement/internal/controller"
 	"UserManagement/internal/middleware"
-	"UserManagement/internal/repository/mysql"
+	"UserManagement/internal/repository"
 	"UserManagement/internal/router"
 	"UserManagement/internal/service"
 	"UserManagement/internal/view"
@@ -22,7 +22,7 @@ func Start() {
 	}
 	defer db.Close()
 
-	userRepo := mysql.NewUserRepositoryMySQL(db)
+	userRepo := repository.NewUserRepository(db)
 	userService := service.NewUserService(userRepo)
 
 	renderer := view.NewRenderer("static")
