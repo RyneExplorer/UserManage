@@ -10,8 +10,9 @@ type ctxKey int
 const authKey ctxKey = 1
 
 type AuthInfo struct {
-	UserID int
-	Role   string
+	UserID   int
+	Role     string
+	Username string
 }
 
 func WithAuth(next http.Handler, store *SessionStore, cookieName string) http.Handler {
@@ -19,7 +20,7 @@ func WithAuth(next http.Handler, store *SessionStore, cookieName string) http.Ha
 		c, err := r.Cookie(cookieName)
 		if err == nil && c.Value != "" {
 			if sess, ok := store.Get(c.Value); ok {
-				ctx := context.WithValue(r.Context(), authKey, AuthInfo{UserID: sess.UserID, Role: sess.Role})
+				ctx := context.WithValue(r.Context(), authKey, AuthInfo{UserID: sess.UserID, Role: sess.Role, Username: sess.Username})
 				next.ServeHTTP(w, r.WithContext(ctx))
 				return
 			}

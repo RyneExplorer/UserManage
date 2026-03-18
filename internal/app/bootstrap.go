@@ -2,7 +2,6 @@ package app
 
 import (
 	"UserManagement/internal/config"
-	"UserManagement/internal/controller"
 	"UserManagement/internal/middleware"
 	"UserManagement/internal/repository"
 	"UserManagement/internal/router"
@@ -28,18 +27,8 @@ func Start() {
 	renderer := view.NewRenderer("static")
 	sessions := middleware.NewSessionStore()
 
-	authController := &controller.AuthController{
-		Users:      userService,
-		Sessions:   sessions,
-		CookieName: cfg.SessionCookieName,
-		Renderer:   renderer,
-	}
-	userController := &controller.UserController{
-		Users:    userService,
-		Renderer: renderer,
-	}
-
-	handler := router.NewMux(cfg, authController, userController, sessions)
+	r := router.NewRouter(cfg, userService, sessions, renderer)
+	handler := r.Handler()
 
 	server := http.Server{
 		Addr:    cfg.Addr,

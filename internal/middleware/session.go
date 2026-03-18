@@ -7,9 +7,10 @@ import (
 )
 
 type Session struct {
-	ID     string
-	UserID int
-	Role   string
+	ID       string
+	UserID   int
+	Role     string
+	Username string
 }
 
 type SessionStore struct {
@@ -21,10 +22,10 @@ func NewSessionStore() *SessionStore {
 	return &SessionStore{sessions: map[string]Session{}}
 }
 
-func (s *SessionStore) Create(userID int, role string) string {
+func (s *SessionStore) Create(userID int, role, username string) string {
 	id := newSessionID()
 	s.mu.Lock()
-	s.sessions[id] = Session{ID: id, UserID: userID, Role: role}
+	s.sessions[id] = Session{ID: id, UserID: userID, Role: role, Username: username}
 	s.mu.Unlock()
 	return id
 }

@@ -38,8 +38,8 @@ docs/
 
 ## 3. 环境要求
 
-- Go：项目 `go.mod` 为 `go 1.23.9`
-- MySQL：推荐 5.7+/8.x
+- Go：项目 `go.mod` 为 `go 1.24.12`
+- MySQL：推荐 8.x
 
 ## 4. 配置说明
 
@@ -75,10 +75,10 @@ mysql -u root -p < scripts/schema.sql
 表结构要点：
 
 - 表：`users`
-- 密码字段：`password_hash`（存储 bcrypt hash）
+- 密码字段：`password`（存储 bcrypt hash）
 - 角色字段：`role`（`admin` / `user`）
 - 状态字段：`status`（1 启用，0 禁用）
-- 登录时间：`last_time`（登录成功后更新）
+- 登录时间：`updated_time`（登录成功后更新）
 
 ## 6. 启动与运行
 
@@ -127,10 +127,10 @@ go run ./cmd
   - 用户名/密码不能为空
   - 用户名唯一（已存在返回 `ErrUsernameTaken`）
   - 第一个注册用户自动成为管理员（`repo.Count(ctx) == 0`）
-  - 密码使用 bcrypt 生成 hash，写入 `password_hash`
+  - 密码使用 bcrypt 生成 hash，写入 `password`
 - 登录
   - 用户不存在 / 密码不匹配 / 状态为禁用（`status == 0`）均视为登录失败
-  - 登录成功后更新 `last_time`
+  - 登录成功后更新 `updated_time`
 
 ## 9. 分层说明（MVC + Repository）
 

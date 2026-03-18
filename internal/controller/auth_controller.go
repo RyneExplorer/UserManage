@@ -2,6 +2,7 @@ package controller
 
 import (
 	"UserManagement/internal/middleware"
+	"UserManagement/internal/model/dto/request"
 	"UserManagement/internal/service"
 	"UserManagement/internal/view"
 	"errors"
@@ -16,7 +17,17 @@ type AuthController struct {
 }
 
 type authPageData struct {
-	Error string
+	Error   string
+	Success bool
+}
+
+func NewAuthController(users *service.UserService, sessions *middleware.SessionStore, cookieName string, renderer *view.Renderer) *AuthController {
+	return &AuthController{
+		Users:      users,
+		Sessions:   sessions,
+		CookieName: cookieName,
+		Renderer:   renderer,
+	}
 }
 
 func (c *AuthController) Login(w http.ResponseWriter, r *http.Request) {
@@ -30,7 +41,11 @@ func (c *AuthController) Login(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		u, err := c.Users.Authenticate(r.Context(), r.FormValue("username"), r.FormValue("password"))
+		req := request.LoginRequest{
+			Username: r.FormValue("username"),
+			Password: r.FormValue("password"),
+		}
+		u, err := c.Users.Authenticate(r.Context(), req.Username, req.Password)
 		if err != nil {
 			if errors.Is(err, service.ErrInvalidCredentials) {
 				_ = c.Renderer.Render(w, "login.html", authPageData{Error: "用户名或密码错误"})
@@ -40,7 +55,7 @@ func (c *AuthController) Login(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		sid := c.Sessions.Create(u.ID, u.Role)
+		sid := c.Sessions.Create(u.ID, u.Role, u.Username)
 		http.SetCookie(w, &http.Cookie{
 			Name:     c.CookieName,
 			Value:    sid,
@@ -48,7 +63,7 @@ func (c *AuthController) Login(w http.ResponseWriter, r *http.Request) {
 			HttpOnly: true,
 			SameSite: http.SameSiteLaxMode,
 		})
-		http.Redirect(w, r, "/users", http.StatusFound)
+		http.Redirect(w, r, "/dashboard", http.StatusFound)
 		return
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -66,7 +81,11 @@ func (c *AuthController) Register(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		_, err := c.Users.Register(r.Context(), r.FormValue("username"), r.FormValue("password"))
+		req := request.RegisterRequest{
+			Username: r.FormValue("username"),
+			Password: r.FormValue("password"),
+		}
+		_, err := c.Users.Register(r.Context(), req.Username, req.Password)
 		if err != nil {
 			if errors.Is(err, service.ErrUsernameTaken) {
 				_ = c.Renderer.Render(w, "register.html", authPageData{Error: "用户名已存在"})
@@ -75,7 +94,7 @@ func (c *AuthController) Register(w http.ResponseWriter, r *http.Request) {
 			_ = c.Renderer.Render(w, "register.html", authPageData{Error: "注册失败"})
 			return
 		}
-		http.Redirect(w, r, "/login", http.StatusFound)
+		_ = c.Renderer.Render(w, "register.html", authPageData{Success: true})
 		return
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)

@@ -1,12 +1,12 @@
 package service
 
 import (
-	"UserManagement/internal/model"
 	"UserManagement/internal/repository"
 	"context"
 	"errors"
 	"strings"
 
+	"UserManagement/internal/model/entity"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -35,14 +35,14 @@ func (s *UserService) Register(ctx context.Context, username, password string) (
 		return 0, ErrUsernameTaken
 	}
 
-	role := model.RoleUser
+	role := entity.RoleUser
 	count, err := s.repo.Count(ctx)
 	if err != nil {
 		return 0, err
 	}
 	if count == 0 {
 		// 首个用户自动设为管理员
-		role = model.RoleAdmin
+		role = entity.RoleAdmin
 	}
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
@@ -50,7 +50,7 @@ func (s *UserService) Register(ctx context.Context, username, password string) (
 		return 0, err
 	}
 
-	return s.repo.Create(ctx, model.User{
+	return s.repo.Create(ctx, entity.User{
 		Username: username,
 		Password: string(hash),
 		Role:     role,
@@ -58,7 +58,7 @@ func (s *UserService) Register(ctx context.Context, username, password string) (
 	})
 }
 
-func (s *UserService) Authenticate(ctx context.Context, username, password string) (*model.User, error) {
+func (s *UserService) Authenticate(ctx context.Context, username, password string) (*entity.User, error) {
 	username = strings.TrimSpace(username)
 	if username == "" || password == "" {
 		return nil, ErrInvalidCredentials
@@ -83,24 +83,77 @@ func (s *UserService) Authenticate(ctx context.Context, username, password strin
 	return u, nil
 }
 
-func (s *UserService) ListAll(ctx context.Context) ([]model.User, error) {
+func (s *UserService) ListAll(ctx context.Context) ([]entity.User, error) {
 	return s.repo.ListAll(ctx)
 }
 
-func (s *UserService) GetByID(ctx context.Context, id int) (*model.User, error) {
+func (s *UserService) ListByFilter(ctx context.Context, username string, status *int8) ([]entity.User, error) {
+	username = strings.TrimSpace(username)
+	return s.repo.ListByFilter(ctx, username, status)
+}
+
+func (s *UserService) ListByFilterPaged(ctx context.Context, username string, status *int8, page, pageSize int) ([]entity.User, int, error) {
+	username = strings.TrimSpace(username)
+	if page < 1 {
+		page = 1
+	}
+	offset := (page - 1) * pageSize
+	return s.repo.ListByFilterPaged(ctx, username, status, offset, pageSize)
+}
+
+func (s *UserService) GetByID(ctx context.Context, id int) (*entity.User, error) {
 	return s.repo.FindByID(ctx, id)
 }
 
-func (s *UserService) UpdateUser(ctx context.Context, user model.User) error {
+func (s *UserService) CreateUser(ctx context.Context, username, password, role string, status int8) error {
+	username = strings.TrimSpace(username)
+	if username == "" || password == "" {
+		return errors.New("用户名和密码不能为空")
+	}
+	if role != entity.RoleAdmin && role != entity.RoleUser {
+		return errors.New("无效的角色")
+	}
+
+	existing, err := s.repo.FindByUsername(ctx, username)
+	if err != nil {
+		return err
+	}
+	if existing != nil {
+		return ErrUsernameTaken
+	}
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+
+	_, err = s.repo.Create(ctx, entity.User{
+		Username: username,
+		Password: string(hash),
+		Role:     role,
+		Status:   status,
+	})
+	return err
+}
+
+func (s *UserService) UpdateUser(ctx context.Context, user entity.User, newPassword string) error {
 	user.Username = strings.TrimSpace(user.Username)
 	if user.ID == 0 || user.Username == "" {
 		return errors.New("无效的用户名")
 	}
-	if user.Role != model.RoleAdmin && user.Role != model.RoleUser {
+	if user.Role != entity.RoleAdmin && user.Role != entity.RoleUser {
 		return errors.New("无效的角色")
 	}
 	if user.Status != 0 && user.Status != 1 {
 		return errors.New("无效的状态")
+	}
+	if newPassword != "" {
+		hash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+		if err != nil {
+			return err
+		}
+		user.Password = string(hash)
+		return s.repo.UpdateWithPassword(ctx, user)
 	}
 	return s.repo.Update(ctx, user)
 }

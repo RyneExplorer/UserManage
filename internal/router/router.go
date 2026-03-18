@@ -4,31 +4,60 @@ import (
 	"UserManagement/internal/config"
 	"UserManagement/internal/controller"
 	"UserManagement/internal/middleware"
+	"UserManagement/internal/service"
+	"UserManagement/internal/view"
 	"net/http"
 )
 
-func NewMux(cfg config.Config,
-	auth *controller.AuthController,
-	users *controller.UserController,
+type Router struct {
+	cfg      config.Config
+	sessions *middleware.SessionStore
+	auth     *controller.AuthController
+	users    *controller.UserController
+}
+
+func NewRouter(cfg config.Config,
+	users *service.UserService,
 	sessions *middleware.SessionStore,
-) http.Handler {
+	renderer *view.Renderer,
+) *Router {
+	return &Router{
+		cfg:      cfg,
+		sessions: sessions,
+		auth:     controller.NewAuthController(users, sessions, cfg.SessionCookieName, renderer),
+		users:    controller.NewUserController(users, renderer),
+	}
+}
+
+func (r *Router) Handler() http.Handler {
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		if _, ok := middleware.GetAuth(r); ok {
-			http.Redirect(w, r, "/users", http.StatusFound)
+	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
+
+	mux.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
+		if req.URL.Path != "/" {
+			http.NotFound(w, req)
 			return
 		}
-		http.Redirect(w, r, "/login", http.StatusFound)
+		if _, ok := middleware.GetAuth(req); ok {
+			http.Redirect(w, req, "/dashboard", http.StatusFound)
+			return
+		}
+		http.Redirect(w, req, "/login", http.StatusFound)
 	})
 
-	mux.HandleFunc("/login", auth.Login)
-	mux.HandleFunc("/register", auth.Register)
-	mux.HandleFunc("/logout", auth.Logout)
+	mux.Handle("/dashboard", middleware.RequireLogin(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		http.ServeFile(w, req, "static/index.html")
+	})))
 
-	mux.Handle("/users", middleware.RequireLogin(http.HandlerFunc(users.List)))
-	mux.Handle("/users/edit", middleware.RequireAdmin(http.HandlerFunc(users.Edit)))
-	mux.Handle("/users/delete", middleware.RequireAdmin(http.HandlerFunc(users.Delete)))
+	mux.HandleFunc("/login", r.auth.Login)
+	mux.HandleFunc("/register", r.auth.Register)
+	mux.HandleFunc("/logout", r.auth.Logout)
 
-	return middleware.WithAuth(mux, sessions, cfg.SessionCookieName)
+	mux.Handle("/users", middleware.RequireLogin(http.HandlerFunc(r.users.List)))
+	mux.Handle("/users/edit", middleware.RequireAdmin(http.HandlerFunc(r.users.Edit)))
+	mux.Handle("/users/create", middleware.RequireAdmin(http.HandlerFunc(r.users.CreateUser)))
+	mux.Handle("/users/delete", middleware.RequireAdmin(http.HandlerFunc(r.users.Delete)))
+
+	return middleware.WithAuth(mux, r.sessions, r.cfg.SessionCookieName)
 }
