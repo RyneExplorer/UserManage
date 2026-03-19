@@ -35,8 +35,8 @@ func (r *Renderer) Render(w http.ResponseWriter, name string, data any) error {
 		// pageRange returns page numbers with -1 as ellipsis sentinel
 		// e.g. page=5, total=10 → [1, -1, 4, 5, 6, -1, 10]
 		"pageRange": func(page, total int) []int {
-			if total <= 1 {
-				return nil
+			if total < 1 {
+				total = 1
 			}
 			set := map[int]bool{}
 			// always include first, last, current and neighbours

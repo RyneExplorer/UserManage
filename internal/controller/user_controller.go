@@ -156,7 +156,7 @@ func (c *UserController) Edit(w http.ResponseWriter, r *http.Request) {
 			renderListWithModal(&u, "保存失败: "+err.Error())
 			return
 		}
-		setFlash(w, "用户 "+req.Username+" 已成功更新")
+		setFlash(w, "edit:用户 "+req.Username+" 编辑成功")
 		http.Redirect(w, r, "/users", http.StatusFound)
 		return
 	default:
@@ -200,7 +200,7 @@ func (c *UserController) CreateUser(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	setFlash(w, "用户 "+req.Username+" 已成功创建")
+	setFlash(w, "create:用户 "+req.Username+" 新建成功")
 	http.Redirect(w, r, "/users", http.StatusFound)
 }
 
@@ -219,6 +219,6 @@ func (c *UserController) Delete(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "server error", http.StatusInternalServerError)
 		return
 	}
-	setFlash(w, "用户 "+username+" 已成功删除")
+	setFlash(w, "delete:用户 "+username+" 删除成功")
 	http.Redirect(w, r, "/users", http.StatusFound)
 }
